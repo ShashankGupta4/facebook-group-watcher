@@ -1,4 +1,4 @@
-var maxPostsToScan = 5;
+var maxPostsToScan = 3;
 
 function getGroupPostContent(postIndex)
 {
@@ -120,9 +120,11 @@ function openGroup(groupUrl)
 function deleteGroupPost(postIndex)
 {
 	var macro = "CODE:";
+	macro += "SET !TIMEOUT_STEP 10\n";
 	macro += "TAG POS=" + postIndex.toString() + " TYPE=A ATTR=ROLE:button&&ARIA-LABEL:Story<SP>options\n";
-	macro += "TAG POS=1 TYPE=SPAN ATTR=CLASS:*&&TXT:Delete<SP>Post\n";
-	macro += "TAG POS=1 TYPE=BUTTON FORM=ACTION:/ajax/groups/mall/delete.php ATTR=TXT:Delete";
+	macro += "TAG XPATH=\"//div[@class='uiContextualLayerPositioner uiLayer']//li//span/span[text()='Delete Post']\"\n";
+	macro += "TAG POS=1 TYPE=BUTTON FORM=ACTION:/ajax/groups/mall/delete.php ATTR=TXT:Delete\n";
+	macro += "WAIT SECONDS=3";
 
 	var retVal = iimPlay(macro);
 	if (retVal === -101)
@@ -135,7 +137,7 @@ function deleteGroupPost(postIndex)
 	}
 }
 
-function runCleaner()
+function runWatcher()
 {
 	var keywords = loadKeywords();
 	if (keywords === "#ABORT#")
@@ -186,11 +188,15 @@ function runCleaner()
 		
 		// Reset the counter.
 		currTries = 1;
-		
+
+		var deletedPostsCount = 0;
+
 		// Scanning each post.
 		for (var i = 1; i <= maxPostsToScan; i++)
 		{
-			var content = getGroupPostContent(i);
+			var correctPostIndex = i - deletedPostsCount;
+
+			var content = getGroupPostContent(correctPostIndex);
 			if (content === "#ABORT#")
 			{
 				iimDisplay("Operation aborted.");
@@ -214,7 +220,7 @@ function runCleaner()
 				continue;
 			}
 
-			// Reset the counter.
+			// Reset the counter after successful scrape.
 			currTries = 1;
 
 			// Check if the post contains a specified keyword
@@ -222,9 +228,12 @@ function runCleaner()
 			{
 				// Perform appropriate action.
 
-				alert("Keyword(s) detected: " + content);
+				//alert("Keyword(s) detected: " + content);
 
-				deleteGroupPost(i);
+				deleteGroupPost(correctPostIndex);
+
+				// Update the count.
+				deletedPostsCount++;
 			}
 		}
 	}
@@ -232,4 +241,4 @@ function runCleaner()
 	
 }
 
-runCleaner();
+runWatcher();
